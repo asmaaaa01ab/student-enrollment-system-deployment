@@ -1,0 +1,145 @@
+# Student Enrollment System — orchestration locale / serveur unique
+# Usage : cp .env.example .env  →  docker compose up -d --build
+
+x-spring-common: &spring-common
+  restart: unless-stopped
+  networks:
+    - enrollment-net
+  environment: &spring-env
+    EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75.0}
+
+x-db-env: &db-env
+  DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant dans .env}
+
+services:
+  # ---------- Base de données ----------
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD manquant dans .env}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - enrollment-net
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ---------- Service discovery ----------
+  eureka-server:
+    <<: *spring-common
+    build: ./services/eureka-server
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/ > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  # ---------- Microservices métier ----------
+  auth-service:
+    <<: *spring-common
+    build: ./services/auth-service
+    container_name: auth-service
+    environment:
+      <<: [*spring-env, *db-env]
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/db_auth?createDatabaseIfNotExist=true
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET manquant dans .env}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  student-service:
+    <<: *spring-common
+    build: ./services/student-service
+    container_name: student-service
+    environment:
+      <<: [*spring-env, *db-env]
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/db_students?createDatabaseIfNotExist=true
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  course-service:
+    <<: *spring-common
+    build: ./services/course-service
+    container_name: course-service
+    environment:
+      <<: [*spring-env, *db-env]
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/db_courses?createDatabaseIfNotExist=true
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  enrollment-service:
+    <<: *spring-common
+    build: ./services/enrollment-service
+    container_name: enrollment-service
+    environment:
+      <<: [*spring-env, *db-env]
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/db_enrollments?createDatabaseIfNotExist=true
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  # ---------- Point d'entrée API ----------
+  api-gateway:
+    <<: *spring-common
+    build: ./services/api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      <<: *spring-env
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET manquant dans .env}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:8084}
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      student-service:
+        condition: service_started
+      course-service:
+        condition: service_started
+      enrollment-service:
+        condition: service_started
+
+  # ---------- Frontend Thymeleaf ----------
+  frontend-service:
+    <<: *spring-common
+    build: ./services/frontend-service
+    container_name: frontend-service
+    ports:
+      - "8084:8084"
+    environment:
+      <<: *spring-env
+      # URL appelée par le NAVIGATEUR (pas par le conteneur) → adresse publique du gateway
+      GATEWAY_URL: ${GATEWAY_URL:-http://localhost:8080}
+    depends_on:
+      - api-gateway
+
+networks:
+  enrollment-net:
+    driver: bridge
+
+volumes:
+  mysql-data:
