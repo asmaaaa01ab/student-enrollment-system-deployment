@@ -66,7 +66,7 @@ if (loginForm) {
             email:    email.value.trim(),
             password: password.value.trim()
         };
-        fetch('${API_BASE_URL}/auth/login', {
+        fetch(`${API_BASE_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -192,7 +192,7 @@ if (registerForm) {
             lastName:  lastName.value.trim(),
             password:  password.value.trim()
         };
-        fetch('${API_BASE_URL}/auth/register', {
+        fetch(`${API_BASE_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
