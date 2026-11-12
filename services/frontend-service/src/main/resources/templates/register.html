@@ -45,6 +45,9 @@
         <p class="auth-switch">Already have an account?<a th:href="@{/login}" class="link-accent">Login</a></p>
     </div>
 </div>
+<script th:inline="javascript">
+    window.GATEWAY_URL = /*[[${@environment.getProperty('gateway.url')}]]*/ '';
+</script>
 <script th:src="@{/js/auth.js}"></script>
 </body>
 </html>

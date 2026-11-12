@@ -1,3 +1,4 @@
+const API_BASE_URL = (window.GATEWAY_URL || '').replace(/\/$/, '');
 const loginForm = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
 function showAlert(element, message, type = 'error') {
@@ -65,7 +66,7 @@ if (loginForm) {
             email:    email.value.trim(),
             password: password.value.trim()
         };
-        fetch('http://localhost:8080/auth/login', {
+        fetch('${API_BASE_URL}/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -191,7 +192,7 @@ if (registerForm) {
             lastName:  lastName.value.trim(),
             password:  password.value.trim()
         };
-        fetch('http://localhost:8080/auth/register', {
+        fetch('${API_BASE_URL}/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
