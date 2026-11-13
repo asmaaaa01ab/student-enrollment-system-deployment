@@ -1,21 +1,25 @@
-# Pipeline CI : a chaque Pull Request vers main (et a chaque fusion dans main),
-# GitHub construit les images Docker et verifie le fichier docker-compose.yml.
+# Pipeline CI : à chaque Pull Request vers main (et à chaque fusion dans main),
+# GitHub construit les images Docker et vérifie le fichier docker-compose.yml.
 name: CI - Docker
+
 on:
   pull_request:
     branches: [main]
   push:
     branches: [main]
-  workflow_dispatch:        # permet aussi de le lancer a la main depuis l'onglet Actions (run workflow)
+  workflow_dispatch:        # permet aussi de le lancer à la main depuis l'onglet Actions
+
 permissions:
-  contents: read            # le robot peut seulement LIRE le repo (security)
+  contents: read            # le robot peut seulement LIRE le dépôt (sécurité)
+
 jobs:
-  # ---------- Travail 1 : construire chaque image Docker ---------
+  # ---------- Travail 1 : construire chaque image Docker ----------
   build-images:
     name: Build ${{ matrix.service }}
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false      # si une image echoue, les autres continuent
+      fail-fast: false      # si une image échoue, les autres continuent
+      max-parallel: 3       # 3 constructions à la fois : moins de demandes simultanées à Maven Central
       matrix:
         service:
           - eureka-server
@@ -26,29 +30,50 @@ jobs:
           - enrollment-service
           - frontend-service
     steps:
-      - name: Recuperer le code
+      - name: Récupérer le code
         uses: actions/checkout@v6
-      - name: Preparer Docker Buildx
+
+      - name: Préparer Docker Buildx
         uses: docker/setup-buildx-action@v4
-      - name: Construire l'image (sans l'envoyer nulle part)
+
+      - name: Construire l'image (1re tentative)
+        id: build1
+        continue-on-error: true   # un échec ici n'arrête pas le travail : on réessaie juste après
         uses: docker/build-push-action@v7
         with:
           context: services/${{ matrix.service }}
           push: false
           load: true
           tags: student-enrollment/${{ matrix.service }}:ci
+
+      - name: Attendre 60 secondes avant de réessayer
+        if: steps.build1.outcome == 'failure'
+        run: sleep 60
+
+      - name: Construire l'image (2e tentative)
+        if: steps.build1.outcome == 'failure'
+        uses: docker/build-push-action@v7
+        with:
+          context: services/${{ matrix.service }}
+          push: false
+          load: true
+          tags: student-enrollment/${{ matrix.service }}:ci
+
       - name: Afficher la taille de l'image
         run: docker image ls student-enrollment/${{ matrix.service }}:ci
-  # ---------- Travail 2 : verifier docker-compose.yml ---------
+
+  # ---------- Travail 2 : vérifier docker-compose.yml ----------
   validate-compose:
     name: Valider docker-compose.yml
     runs-on: ubuntu-latest
     steps:
       - name: Récupérer le code
         uses: actions/checkout@v6
+
       - name: Créer un fichier .env factice (valeurs de test, sans importance)
         run: |
           echo "DB_PASSWORD=ci-test-password" >> .env
           echo "JWT_SECRET=ci-test-secret-with-at-least-32-characters-long" >> .env
+
       - name: Vérifier la syntaxe de docker-compose.yml
         run: docker compose config --quiet
