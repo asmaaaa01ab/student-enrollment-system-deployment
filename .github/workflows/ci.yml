@@ -1,0 +1,54 @@
+# Pipeline CI : a chaque Pull Request vers main (et a chaque fusion dans main),
+# GitHub construit les images Docker et verifie le fichier docker-compose.yml.
+name: CI - Docker
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:        # permet aussi de le lancer a la main depuis l'onglet Actions (run workflow)
+permissions:
+  contents: read            # le robot peut seulement LIRE le repo (security)
+jobs:
+  # ---------- Travail 1 : construire chaque image Docker ---------
+  build-images:
+    name: Build ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false      # si une image echoue, les autres continuent
+      matrix:
+        service:
+          - eureka-server
+          - api-gateway
+          - auth-service
+          - student-service
+          - course-service
+          - enrollment-service
+          - frontend-service
+    steps:
+      - name: Recuperer le code
+        uses: actions/checkout@v6
+      - name: Preparer Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Construire l'image (sans l'envoyer nulle part)
+        uses: docker/build-push-action@v7
+        with:
+          context: services/${{ matrix.service }}
+          push: false
+          load: true
+          tags: student-enrollment/${{ matrix.service }}:ci
+      - name: Afficher la taille de l'image
+        run: docker image ls student-enrollment/${{ matrix.service }}:ci
+  # ---------- Travail 2 : verifier docker-compose.yml ---------
+  validate-compose:
+    name: Valider docker-compose.yml
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v6
+      - name: Créer un fichier .env factice (valeurs de test, sans importance)
+        run: |
+          echo "DB_PASSWORD=ci-test-password" >> .env
+          echo "JWT_SECRET=ci-test-secret-with-at-least-32-characters-long" >> .env
+      - name: Vérifier la syntaxe de docker-compose.yml
+        run: docker compose config --quiet
