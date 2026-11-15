@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: student-enrollment
+  labels:
+    app.kubernetes.io/part-of: student-enrollment
+data:
+  SPRING_PROFILES_ACTIVE: "k8s"
+  AUTH_DB_URL: "jdbc:mysql://mysql:3306/db_auth?createDatabaseIfNotExist=true"
+  STUDENT_DB_URL: "jdbc:mysql://mysql:3306/db_students?createDatabaseIfNotExist=true"
+  COURSE_DB_URL: "jdbc:mysql://mysql:3306/db_courses?createDatabaseIfNotExist=true"
+  ENROLLMENT_DB_URL: "jdbc:mysql://mysql:3306/db_enrollments?createDatabaseIfNotExist=true"
