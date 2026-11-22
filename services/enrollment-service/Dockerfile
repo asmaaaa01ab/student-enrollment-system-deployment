@@ -6,11 +6,11 @@ WORKDIR /workspace
 
 # Cache des dépendances : on copie d'abord uniquement le pom.xml
 COPY pom.xml .
-RUN --mount=type=cache,target=/root/.m2 mvn -B -q dependency:go-offline
+RUN --mount=type=cache,target=/root/.m2 mvn -B -q -U dependency:go-offline
 
 # Compilation de l'application
 COPY src ./src
-RUN --mount=type=cache,target=/root/.m2 mvn -B -q clean package -DskipTests
+RUN --mount=type=cache,target=/root/.m2 mvn -B -q -U clean package -DskipTests
 
 # ---------- Étape 2 : runtime (JRE 17 léger) ----------
 FROM eclipse-temurin:17-jre-alpine
