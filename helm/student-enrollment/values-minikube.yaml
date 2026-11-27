@@ -1,0 +1,8 @@
+# Minikube : images construites en local puis chargées avec `minikube image load`
+global:
+  imageRegistry: ""
+  imageTag: dev
+  imagePullPolicy: IfNotPresent
+
+# Le navigateur passe par `minikube tunnel` (Ingress sur 127.0.0.1)
+gatewayUrl: "http://127.0.0.1"

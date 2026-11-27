@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  labels:
+    app.kubernetes.io/part-of: student-enrollment
+data:
+  SPRING_PROFILES_ACTIVE: {{ .Values.global.springProfile | quote }}
+  {{- range $key, $db := .Values.mysql.databases }}
+  {{ upper $key }}_DB_URL: {{ printf "jdbc:mysql://mysql:3306/%s?createDatabaseIfNotExist=true" $db | quote }}
+  {{- end }}

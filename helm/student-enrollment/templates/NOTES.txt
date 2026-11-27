@@ -1,0 +1,9 @@
+Application "{{ .Release.Name }}" installée dans le namespace {{ .Release.Namespace }}.
+
+Suivre le démarrage :
+  kubectl get pods -n {{ .Release.Namespace }} -w
+
+{{- if .Values.ingress.enabled }}
+
+Accès navigateur (Minikube) : lance `minikube tunnel` puis ouvre http://127.0.0.1
+{{- end }}
