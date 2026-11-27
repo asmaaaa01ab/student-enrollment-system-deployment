@@ -1,0 +1,6 @@
+apiVersion: v2
+name: student-enrollment
+description: Application microservices Spring Boot de gestion des inscriptions (6 services + MySQL + Ingress)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

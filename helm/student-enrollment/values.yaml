@@ -1,0 +1,103 @@
+# Valeurs par défaut du chart student-enrollment.
+# Les mots de passe ne sont PAS dans ce fichier : on les donne à l'installation avec --set.
+
+global:
+  imageRegistry: ""            # vide = images locales (Minikube) ; sinon <registre>.azurecr.io
+  imagePrefix: student-enrollment
+  imageTag: dev
+  imagePullPolicy: IfNotPresent
+  springProfile: k8s
+
+# Adresse de l'API vue par le NAVIGATEUR (utilisée par le frontend-service).
+# Vide = le navigateur appelle la même adresse que le site (via l'Ingress).
+gatewayUrl: "http://127.0.0.1"
+
+secrets:
+  dbPassword: ""               # --set secrets.dbPassword=...
+  jwtSecret: ""                # --set secrets.jwtSecret=...  (au moins 32 caractères)
+
+mysql:
+  image: mysql:8.0
+  storage: 2Gi
+  storageClassName: ""         # vide = classe par défaut du cluster
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+  # clé -> nom de la base ; la clé donne la variable de la ConfigMap (AUTH_DB_URL, ...)
+  databases:
+    auth: db_auth
+    student: db_students
+    course: db_courses
+    enrollment: db_enrollments
+
+# Sondes communes aux 6 services (Actuator, issue #3)
+probes:
+  startup:
+    periodSeconds: 5
+    failureThreshold: 30
+  readiness:
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  liveness:
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# Ressources communes aux 6 services
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
+
+# Les 6 services : nom (clé), image, port, réplicas.
+#   database : base utilisée (clé de mysql.databases) ; absent = pas de base
+#   jwt      : le service reçoit JWT_SECRET
+#   frontend : le service reçoit GATEWAY_URL
+services:
+  api-gateway:
+    image: api-gateway
+    port: 8080
+    replicas: 1
+    jwt: true
+  student-service:
+    image: student-service
+    port: 8081
+    replicas: 1
+    database: student
+  course-service:
+    image: course-service
+    port: 8082
+    replicas: 2
+    database: course
+  enrollment-service:
+    image: enrollment-service
+    port: 8083
+    replicas: 1
+    database: enrollment
+  frontend-service:
+    image: frontend-service
+    port: 8084
+    replicas: 1
+    frontend: true
+  auth-service:
+    image: auth-service
+    port: 8085
+    replicas: 1
+    database: auth
+    jwt: true
+
+ingress:
+  enabled: true
+  className: nginx
+  host: ""                     # vide = toutes les adresses
+  apiPaths:                    # chemins envoyés à api-gateway ; "/" va au frontend-service
+    - /auth
+    - /students
+    - /courses
+    - /enrollments

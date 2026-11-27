@@ -1,0 +1,10 @@
+# AKS : images du registre ACR (envoyées par Asma en 0.1.x)
+global:
+  # À remplacer par le nom du registre donné par Asma
+  imageRegistry: "REGISTRE.azurecr.io"
+  imageTag: "0.1.0"
+  imagePullPolicy: IfNotPresent
+
+# Vide : le navigateur appelle la même adresse que le site (l'IP publique de l'Ingress).
+# Ne PAS laisser http://127.0.0.1 sur AKS.
+gatewayUrl: ""
